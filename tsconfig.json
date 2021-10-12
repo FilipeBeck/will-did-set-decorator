@@ -35,7 +35,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
-    "keyofStringsOnly": true,
     /* Completeness */
     "skipLibCheck": true
   },

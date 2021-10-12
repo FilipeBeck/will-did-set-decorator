@@ -16,13 +16,13 @@ interface SetListener {
  */
 interface Prototype {
 	/**
-	 * Assignment listener, if already assigned by a previous `willSet` or `didSet` call.
-	 */
-	[key: symbol]: SetListener
-	/**
 	 * Prototype chain.
 	 */
 	__proto__: Prototype
+	/**
+	 * Constructor with assignment listeners, if already assigned by a previous `willSet` or `didSet` call.
+	 */
+	constructor: Function & Record<symbol, SetListener>
 }
 /**
  * Shared symbols identified by property key.
@@ -36,7 +36,7 @@ function getSymbol(key: string | symbol): symbol {
 	let keySymbol = keySymbols.get(key)
 
 	if (!keySymbol) {
-		keySymbols.set(key, keySymbol = typeof key  === 'symbol' ? key : Symbol(key))
+		keySymbols.set(key, keySymbol = Symbol(typeof key === 'string' ? key : key.description))
 	}
 
 	return keySymbol
@@ -52,7 +52,7 @@ function getFirstSetHandler(phase: keyof SetListener, target: Prototype, keySymb
 	let handler: Function | undefined
 
 	do {
-		handler = target[keySymbol]?.[phase]
+		handler = target.constructor[keySymbol]?.[phase]
 		target = target.__proto__
 	}
 	while (!handler && target)
@@ -68,7 +68,7 @@ function getFirstSetHandler(phase: keyof SetListener, target: Prototype, keySymb
  */
 function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetListener): PropertyDescriptor | undefined {
 	const alreadyBinded = keySymbol in target.constructor
-	const listener: SetListener = target[keySymbol] ||= {}
+	const listener: SetListener = target.constructor[keySymbol] ||= {}
 
 	Object.assign(listener, setListener)
 	// If already binded, just update `handler` is enough.
@@ -99,7 +99,7 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 		const prototype = target as Prototype
 		const keySymbol = getSymbol(propertyKey)
 		const superWillSet = getFirstSetHandler('will', prototype, keySymbol)
-		const thisDidSet = prototype[keySymbol]?.did
+		const thisDidSet = prototype.constructor[keySymbol]?.did
 		/**
 		 * Handler for `willSet`. Ensures that the `willSet` of superclass will be called just after if it exists.
 		 * @param this Instance where `newValue` will be assigned.
@@ -123,7 +123,7 @@ export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
 		const prototype = target as Prototype
 		const keySymbol = getSymbol(propertyKey)
 		const superDidSet = getFirstSetHandler('did', prototype, keySymbol)
-		const thisWillSet = prototype[keySymbol]?.will
+		const thisWillSet = prototype.constructor[keySymbol]?.will
 		/**
 		 * Handler for `didSet`. Ensures that the `didSet` of superclass will be called just before if it exists.
 		 * @param this Instance where `oldValue` was assigned.
