@@ -90,7 +90,7 @@ function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetList
 	} as PropertyDescriptor & ThisType<any>
 }
 /**
- * Attach a handler that will be executed just before the property is modified. The order os calls is from subclass to superclass. That is, if the class `A` has a `foo` property decorated with `willSet` and the subclass `B` decorates the same property with `willSet`, first `B.willSet` will be called, after `A.willSet`.
+ * Attach a handler that will be executed just before the property is modified. The order of calls is from subclass to superclass. That is, if the class `A` has a `foo` property decorated with `willSet` and the subclass `B` decorates the same property with `willSet`, first `B.willSet` will be called, after `A.willSet`.
  * @param handler Function called with the new value (the value after assignment).
  * @returns The decorator method.
  */
@@ -114,8 +114,8 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 	}
 }
 /**
- * Attach a handler that will be executed just after the property is modified. The order os calls is from superclass to subclass. That is, if the class `A` has a `foo` property decorated with `didSet` and the subclass `B` decorates the same property with `didSet`, first `A.didSet` will be called, after `B.didSet`.
- * @param handler Function called with the old value (the value before assignment).
+ * Attach a handler that will be executed just after the property is modified. The order of calls is from superclass to subclass. That is, if the class `A` has a `foo` property decorated with `didSet` and the subclass `B` decorates the same property with `didSet`, first `A.didSet` will be called, after `B.didSet`.
+ * @param handler Function called with the old value (the value before assignment - undefined in the first call).
  * @returns The decorator method.
  */
 export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
