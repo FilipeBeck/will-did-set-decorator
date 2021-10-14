@@ -26,7 +26,7 @@ class SuperClass {
   public prop?: number
 }
 
-class SubClass {
+class SubClass extends SuperClass {
   @willSet(function(this: SubClass, newValue: string) {
     console.log('SubClass', this.prop, newValue)
   })
@@ -62,7 +62,7 @@ class SuperClass {
   public prop?: number
 }
 
-class SubClass {
+class SubClass extends SuperClass {
   @didSet(function(this: SubClass, oldValue: string) {
     console.log('SubClass', this.prop, oldValue)
   })

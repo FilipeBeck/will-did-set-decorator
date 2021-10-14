@@ -90,7 +90,7 @@ function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetList
 	const listener: SetListener = scope[keySymbol] ||= {}
 
 	Object.assign(listener, setListener)
-	// If already binded, just update `handler` is enough.
+	// If already binded, just update `listener` is enough.
 	if (alreadyBinded) {
 		return
 	}
