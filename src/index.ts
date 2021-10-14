@@ -20,19 +20,37 @@ interface Prototype {
 	 */
 	__proto__: Prototype
 	/**
-	 * Constructor with assignment listeners, if already assigned by a previous `willSet` or `didSet` call.
+	 * Constructor function.
 	 */
-	constructor: Function & Record<symbol, SetListener>
+	constructor: Function
+}
+/**
+ * Scopes for accessors of each constructor, isolating themfrom the prototype chain.
+ */
+const scopes = new Map<Function, Record<symbol, SetListener>>()
+/**
+ * Retrieves the `target` scope  or creates a new if it does not exist.
+ * @param target Prototype to be verified.
+ * @returns The scope.
+ */
+function getScope(target: Prototype): Record<symbol, SetListener> {
+	let scope = scopes.get(target.constructor)
+
+	if (!scope) {
+		scopes.set(target.constructor, scope = {})
+	}
+
+	return scope
 }
 /**
  * Shared symbols identified by property key.
  */
 const keySymbols = new Map<string | symbol, symbol>()
 /**
- * Retrives the symbol for the specified key or creates a new if does not exists.
+ * Retrives the symbol for the specified key or creates a new if it does not exist.
  * @param key Property key.
  */
-function getSymbol(key: string | symbol): symbol {
+function getKeySymbol(key: string | symbol): symbol {
 	let keySymbol = keySymbols.get(key)
 
 	if (!keySymbol) {
@@ -52,7 +70,7 @@ function getFirstSetHandler(phase: keyof SetListener, target: Prototype, keySymb
 	let handler: Function | undefined
 
 	do {
-		handler = target.constructor[keySymbol]?.[phase]
+		handler = getScope(target)[keySymbol]?.[phase]
 		target = target.__proto__
 	}
 	while (!handler && target)
@@ -67,8 +85,9 @@ function getFirstSetHandler(phase: keyof SetListener, target: Prototype, keySymb
  * @returns The updated property descriptor or `undefined` if it is already binded.
  */
 function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetListener): PropertyDescriptor | undefined {
-	const alreadyBinded = keySymbol in target.constructor
-	const listener: SetListener = target.constructor[keySymbol] ||= {}
+	const scope = getScope(target)
+	const alreadyBinded = keySymbol in scope
+	const listener: SetListener = scope[keySymbol] ||= {}
 
 	Object.assign(listener, setListener)
 	// If already binded, just update `handler` is enough.
@@ -97,9 +116,9 @@ function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetList
 export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
 		const prototype = target as Prototype
-		const keySymbol = getSymbol(propertyKey)
+		const keySymbol = getKeySymbol(propertyKey)
 		const superWillSet = getFirstSetHandler('will', prototype, keySymbol)
-		const thisDidSet = prototype.constructor[keySymbol]?.did
+		const superDidSet = getFirstSetHandler('did', prototype, keySymbol)
 		/**
 		 * Handler for `willSet`. Ensures that the `willSet` of superclass will be called just after if it exists.
 		 * @param this Instance where `newValue` will be assigned.
@@ -110,7 +129,7 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 			superWillSet?.call(this, newValue)
 		}
 
-		return bindAccessor(prototype, keySymbol, { will: thisWillSet, did: thisDidSet })
+		return bindAccessor(prototype, keySymbol, { will: thisWillSet, did: superDidSet })
 	}
 }
 /**
@@ -121,9 +140,9 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
 		const prototype = target as Prototype
-		const keySymbol = getSymbol(propertyKey)
+		const keySymbol = getKeySymbol(propertyKey)
+		const superWillSet = getFirstSetHandler('will', prototype, keySymbol)
 		const superDidSet = getFirstSetHandler('did', prototype, keySymbol)
-		const thisWillSet = prototype.constructor[keySymbol]?.will
 		/**
 		 * Handler for `didSet`. Ensures that the `didSet` of superclass will be called just before if it exists.
 		 * @param this Instance where `oldValue` was assigned.
@@ -134,6 +153,6 @@ export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
 			handler.call(this, oldValue)
 		}
 
-		return bindAccessor(prototype, keySymbol, { will: thisWillSet, did: thisDidSet })
+		return bindAccessor(prototype, keySymbol, { will: superWillSet, did: thisDidSet })
 	}
 }

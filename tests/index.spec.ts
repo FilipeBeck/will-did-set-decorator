@@ -104,7 +104,7 @@ describe('willSet', () => {
 			@willSet(function(this: SuperClass, newValue: string) {
 				check(this, SuperClass, this.prop, newValue)
 			})
-			public prop = 'superA'
+			public prop = 'super'
 		}
 
 		class InterClass extends SuperClass {}
@@ -113,26 +113,25 @@ describe('willSet', () => {
 			@willSet(function(this: SubClass, newValue: string) {
 				check(this, SubClass, this.prop, newValue)
 			})
-			public override prop = 'subA'
+			public override prop = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz.prop = 'b'
-		clazz.prop = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(8)
+		expect(check).toBeCalledTimes(1)
+		expect(check).toBeCalledWith(superClass, SuperClass, undefined, 'super')
 
-		expect(check).nthCalledWith(1, clazz, SubClass, undefined, 'superA')
-		expect(check).nthCalledWith(2, clazz, SuperClass, undefined, 'superA')
+		check.mockClear()
 
-		expect(check).nthCalledWith(3, clazz, SubClass, 'superA', 'subA')
-		expect(check).nthCalledWith(4, clazz, SuperClass, 'superA', 'subA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(5, clazz, SubClass, 'subA', 'b')
-		expect(check).nthCalledWith(6, clazz, SuperClass, 'subA', 'b')
+		expect(check).toBeCalledTimes(4)
 
-		expect(check).nthCalledWith(7, clazz, SubClass, 'b', 'c')
-		expect(check).nthCalledWith(8, clazz, SuperClass, 'b', 'c')
+		expect(check).nthCalledWith(1, subClass, SubClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subClass, SuperClass, undefined, 'super')
+
+		expect(check).nthCalledWith(3, subClass, SubClass, 'super', 'sub')
+		expect(check).nthCalledWith(4, subClass, SuperClass, 'super', 'sub')
 	})
 
 	it('calls in the correct order when overriding with key of type symbol', () => {
@@ -142,35 +141,34 @@ describe('willSet', () => {
 			@willSet(function(this: SuperClass, newValue: string) {
 				check(this, SuperClass, this[prop], newValue)
 			})
-			public [prop] = 'superA'
+			public [prop] = 'super'
 		}
 
-		class interClass extends SuperClass {}
+		class InterClass extends SuperClass {}
 
-		class SubClass extends interClass {
+		class SubClass extends InterClass {
 			@willSet(function(this: SubClass, newValue: string) {
 				check(this, SubClass, this[prop], newValue)
 			})
-			public override [prop] = 'subA'
+			public override [prop] = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz[prop] = 'b'
-		clazz[prop] = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(8)
+		expect(check).toBeCalledTimes(1)
+		expect(check).toBeCalledWith(superClass, SuperClass, undefined, 'super')
 
-		expect(check).nthCalledWith(1, clazz, SubClass, undefined, 'superA')
-		expect(check).nthCalledWith(2, clazz, SuperClass, undefined, 'superA')
+		check.mockClear()
 
-		expect(check).nthCalledWith(3, clazz, SubClass, 'superA', 'subA')
-		expect(check).nthCalledWith(4, clazz, SuperClass, 'superA', 'subA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(5, clazz, SubClass, 'subA', 'b')
-		expect(check).nthCalledWith(6, clazz, SuperClass, 'subA', 'b')
+		expect(check).toBeCalledTimes(4)
 
-		expect(check).nthCalledWith(7, clazz, SubClass, 'b', 'c')
-		expect(check).nthCalledWith(8, clazz, SuperClass, 'b', 'c')
+		expect(check).nthCalledWith(1, subClass, SubClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subClass, SuperClass, undefined, 'super')
+
+		expect(check).nthCalledWith(3, subClass, SubClass, 'super', 'sub')
+		expect(check).nthCalledWith(4, subClass, SuperClass, 'super', 'sub')
 	})
 })
 
@@ -278,7 +276,7 @@ describe('didSet', () => {
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, SuperClass, this.prop, oldValue)
 			})
-			public prop = 'superA'
+			public prop = 'super'
 		}
 
 		class InterClass extends SuperClass {}
@@ -287,26 +285,25 @@ describe('didSet', () => {
 			@didSet(function(this: SubClass, oldValue: string) {
 				check(this, SubClass, this.prop, oldValue)
 			})
-			public override prop = 'subA'
+			public override prop = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz.prop = 'b'
-		clazz.prop = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(8)
+		expect(check).toBeCalledTimes(1)
+		expect(check).toBeCalledWith(superClass, SuperClass, 'super', undefined)
 
-		expect(check).nthCalledWith(1, clazz, SuperClass, 'superA', undefined)
-		expect(check).nthCalledWith(2, clazz, SubClass, 'superA', undefined)
+		check.mockClear()
 
-		expect(check).nthCalledWith(3, clazz, SuperClass, 'subA', 'superA')
-		expect(check).nthCalledWith(4, clazz, SubClass, 'subA', 'superA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(5, clazz, SuperClass, 'b', 'subA')
-		expect(check).nthCalledWith(6, clazz, SubClass, 'b', 'subA')
+		expect(check).toBeCalledTimes(4)
 
-		expect(check).nthCalledWith(7, clazz, SuperClass, 'c', 'b')
-		expect(check).nthCalledWith(8, clazz, SubClass, 'c', 'b')
+		expect(check).nthCalledWith(1, subClass, SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(2, subClass, SubClass, 'super', undefined)
+
+		expect(check).nthCalledWith(3, subClass, SuperClass, 'sub', 'super')
+		expect(check).nthCalledWith(4, subClass, SubClass, 'sub', 'super')
 	})
 
 	it('calls in the correct order when overriding with key of type symbol', () => {
@@ -316,7 +313,7 @@ describe('didSet', () => {
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, SuperClass, this[prop], oldValue)
 			})
-			public [prop] = 'superA'
+			public [prop] = 'super'
 		}
 
 		class InterClass extends SuperClass {}
@@ -325,26 +322,25 @@ describe('didSet', () => {
 			@didSet(function(this: SubClass, oldValue: string) {
 				check(this, SubClass, this[prop], oldValue)
 			})
-			public override [prop] = 'subA'
+			public override [prop] = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz[prop] = 'b'
-		clazz[prop] = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(8)
+		expect(check).toBeCalledTimes(1)
+		expect(check).toBeCalledWith(superClass, SuperClass, 'super', undefined)
 
-		expect(check).nthCalledWith(1, clazz, SuperClass, 'superA', undefined)
-		expect(check).nthCalledWith(2, clazz, SubClass, 'superA', undefined)
+		check.mockClear()
 
-		expect(check).nthCalledWith(3, clazz, SuperClass, 'subA', 'superA')
-		expect(check).nthCalledWith(4, clazz, SubClass, 'subA', 'superA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(5, clazz, SuperClass, 'b', 'subA')
-		expect(check).nthCalledWith(6, clazz, SubClass, 'b', 'subA')
+		expect(check).toBeCalledTimes(4)
 
-		expect(check).nthCalledWith(7, clazz, SuperClass, 'c', 'b')
-		expect(check).nthCalledWith(8, clazz, SubClass, 'c', 'b')
+		expect(check).nthCalledWith(1, subClass, SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(2, subClass, SubClass, 'super', undefined)
+
+		expect(check).nthCalledWith(3, subClass, SuperClass, 'sub', 'super')
+		expect(check).nthCalledWith(4, subClass, SubClass, 'sub', 'super')
 	})
 })
 
@@ -497,7 +493,7 @@ describe('willSet + didSet', () => {
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, 'did', SuperClass, this.prop, oldValue)
 			})
-			public prop = 'superA'
+			public prop = 'super'
 		}
 
 		class InterClass extends SuperClass {}
@@ -509,34 +505,31 @@ describe('willSet + didSet', () => {
 			@didSet(function(this: SubClass, oldValue: string) {
 				check(this, 'did', SubClass, this.prop, oldValue)
 			})
-			public override prop = 'subA'
+			public override prop = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz.prop = 'b'
-		clazz.prop = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(16)
+		expect(check).toBeCalledTimes(2)
 
-		expect(check).nthCalledWith(1, clazz, 'will', SubClass, undefined, 'superA')
-		expect(check).nthCalledWith(2, clazz, 'will', SuperClass, undefined, 'superA')
-		expect(check).nthCalledWith(3, clazz, 'did', SuperClass, 'superA', undefined)
-		expect(check).nthCalledWith(4, clazz, 'did', SubClass, 'superA', undefined)
+		expect(check).nthCalledWith(1, superClass, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(2, superClass, 'did', SuperClass, 'super', undefined)
 
-		expect(check).nthCalledWith(5, clazz, 'will', SubClass, 'superA', 'subA')
-		expect(check).nthCalledWith(6, clazz, 'will', SuperClass, 'superA', 'subA')
-		expect(check).nthCalledWith(7, clazz, 'did', SuperClass, 'subA', 'superA')
-		expect(check).nthCalledWith(8, clazz, 'did', SubClass, 'subA', 'superA')
+		check.mockClear()
 
-		expect(check).nthCalledWith(9, clazz, 'will', SubClass, 'subA', 'b')
-		expect(check).nthCalledWith(10, clazz, 'will', SuperClass, 'subA', 'b')
-		expect(check).nthCalledWith(11, clazz, 'did', SuperClass, 'b', 'subA')
-		expect(check).nthCalledWith(12, clazz, 'did', SubClass, 'b', 'subA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(13, clazz, 'will', SubClass, 'b', 'c')
-		expect(check).nthCalledWith(14, clazz, 'will', SuperClass, 'b', 'c')
-		expect(check).nthCalledWith(15, clazz, 'did', SuperClass, 'c', 'b')
-		expect(check).nthCalledWith(16, clazz, 'did', SubClass, 'c', 'b')
+		expect(check).toBeCalledTimes(8)
+
+		expect(check).nthCalledWith(1, subClass, 'will', SubClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subClass, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(3, subClass, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(4, subClass, 'did', SubClass, 'super', undefined)
+
+		expect(check).nthCalledWith(5, subClass, 'will', SubClass, 'super', 'sub')
+		expect(check).nthCalledWith(6, subClass, 'will', SuperClass, 'super', 'sub')
+		expect(check).nthCalledWith(7, subClass, 'did', SuperClass, 'sub', 'super')
+		expect(check).nthCalledWith(8, subClass, 'did', SubClass, 'sub', 'super')
 	})
 
 	it('calls in the correct order when overriding with key of type symbol', () => {
@@ -549,7 +542,7 @@ describe('willSet + didSet', () => {
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, 'did', SuperClass, this[prop], oldValue)
 			})
-			public [prop] = 'superA'
+			public [prop] = 'super'
 		}
 
 		class InterClass extends SuperClass {}
@@ -561,33 +554,136 @@ describe('willSet + didSet', () => {
 			@didSet(function(this: SubClass, oldValue: string) {
 				check(this, 'did', SubClass, this[prop], oldValue)
 			})
-			public override [prop] = 'subA'
+			public override [prop] = 'sub'
 		}
 
-		const clazz = new SubClass()
-		clazz[prop] = 'b'
-		clazz[prop] = 'c'
+		const superClass = new SuperClass()
 
-		expect(check).toBeCalledTimes(16)
+		expect(check).toBeCalledTimes(2)
 
-		expect(check).nthCalledWith(1, clazz, 'will', SubClass, undefined, 'superA')
-		expect(check).nthCalledWith(2, clazz, 'will', SuperClass, undefined, 'superA')
-		expect(check).nthCalledWith(3, clazz, 'did', SuperClass, 'superA', undefined)
-		expect(check).nthCalledWith(4, clazz, 'did', SubClass, 'superA', undefined)
+		expect(check).nthCalledWith(1, superClass, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(2, superClass, 'did', SuperClass, 'super', undefined)
 
-		expect(check).nthCalledWith(5, clazz, 'will', SubClass, 'superA', 'subA')
-		expect(check).nthCalledWith(6, clazz, 'will', SuperClass, 'superA', 'subA')
-		expect(check).nthCalledWith(7, clazz, 'did', SuperClass, 'subA', 'superA')
-		expect(check).nthCalledWith(8, clazz, 'did', SubClass, 'subA', 'superA')
+		check.mockClear()
 
-		expect(check).nthCalledWith(9, clazz, 'will', SubClass, 'subA', 'b')
-		expect(check).nthCalledWith(10, clazz, 'will', SuperClass, 'subA', 'b')
-		expect(check).nthCalledWith(11, clazz, 'did', SuperClass, 'b', 'subA')
-		expect(check).nthCalledWith(12, clazz, 'did', SubClass, 'b', 'subA')
+		const subClass = new SubClass()
 
-		expect(check).nthCalledWith(13, clazz, 'will', SubClass, 'b', 'c')
-		expect(check).nthCalledWith(14, clazz, 'will', SuperClass, 'b', 'c')
-		expect(check).nthCalledWith(15, clazz, 'did', SuperClass, 'c', 'b')
-		expect(check).nthCalledWith(16, clazz, 'did', SubClass, 'c', 'b')
+		expect(check).toBeCalledTimes(8)
+
+		expect(check).nthCalledWith(1, subClass, 'will', SubClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subClass, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(3, subClass, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(4, subClass, 'did', SubClass, 'super', undefined)
+
+		expect(check).nthCalledWith(5, subClass, 'will', SubClass, 'super', 'sub')
+		expect(check).nthCalledWith(6, subClass, 'will', SuperClass, 'super', 'sub')
+		expect(check).nthCalledWith(7, subClass, 'did', SuperClass, 'sub', 'super')
+		expect(check).nthCalledWith(8, subClass, 'did', SubClass, 'sub', 'super')
+	})
+
+	it('handles asymmetric overwrite with key of type string', () => {
+		class SuperClass {
+			@willSet(function(this: SuperClass, newValue: string) {
+				check(this, 'will', SuperClass, this.prop, newValue)
+			})
+			@didSet(function(this: SuperClass, oldValue: string) {
+				check(this, 'did', SuperClass, this.prop, oldValue)
+			})
+			public prop = 'super'
+		}
+
+		class SubWill extends SuperClass {
+			@willSet(function(this: SubWill, newValue: string) {
+				check(this, 'will', SubWill, this.prop, newValue)
+			})
+			public override prop = 'subWill'
+		}
+
+		const subWill = new SubWill()
+
+		expect(check).toBeCalledTimes(6)
+
+		expect(check).nthCalledWith(1, subWill, 'will', SubWill, undefined, 'super')
+		expect(check).nthCalledWith(2, subWill, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(3, subWill, 'did', SuperClass, 'super', undefined)
+
+		expect(check).nthCalledWith(4, subWill, 'will', SubWill, 'super', 'subWill')
+		expect(check).nthCalledWith(5, subWill, 'will', SuperClass, 'super', 'subWill')
+		expect(check).nthCalledWith(6, subWill, 'did', SuperClass, 'subWill', 'super')
+
+		check.mockClear()
+
+		class SubDid extends SuperClass {
+			@didSet(function(this: SubDid, oldValue) {
+				check(this, 'did', SubDid, this.prop, oldValue)
+			})
+			public override prop = 'subDid'
+		}
+
+		const subDid = new SubDid()
+
+		expect(check).toBeCalledTimes(6)
+
+		expect(check).nthCalledWith(1, subDid, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subDid, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(3, subDid, 'did', SubDid, 'super', undefined)
+
+		expect(check).nthCalledWith(4, subDid, 'will', SuperClass, 'super', 'subDid')
+		expect(check).nthCalledWith(5, subDid, 'did', SuperClass, 'subDid', 'super')
+		expect(check).nthCalledWith(6, subDid, 'did', SubDid, 'subDid', 'super')
+	})
+
+	it('handles asymmetric overwrite with key of type symbol', () => {
+		const prop = Symbol()
+
+		class SuperClass {
+			@willSet(function(this: SuperClass, newValue: string) {
+				check(this, 'will', SuperClass, this[prop], newValue)
+			})
+			@didSet(function(this: SuperClass, oldValue: string) {
+				check(this, 'did', SuperClass, this[prop], oldValue)
+			})
+			public [prop] = 'super'
+		}
+
+		class SubWill extends SuperClass {
+			@willSet(function(this: SubWill, newValue: string) {
+				check(this, 'will', SubWill, this[prop], newValue)
+			})
+			public override [prop] = 'subWill'
+		}
+
+		const subWill = new SubWill()
+
+		expect(check).toBeCalledTimes(6)
+
+		expect(check).nthCalledWith(1, subWill, 'will', SubWill, undefined, 'super')
+		expect(check).nthCalledWith(2, subWill, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(3, subWill, 'did', SuperClass, 'super', undefined)
+
+		expect(check).nthCalledWith(4, subWill, 'will', SubWill, 'super', 'subWill')
+		expect(check).nthCalledWith(5, subWill, 'will', SuperClass, 'super', 'subWill')
+		expect(check).nthCalledWith(6, subWill, 'did', SuperClass, 'subWill', 'super')
+
+		check.mockClear()
+
+		class SubDid extends SuperClass {
+			@didSet(function(this: SubDid, oldValue) {
+				check(this, 'did', SubDid, this[prop], oldValue)
+			})
+			public override [prop] = 'subDid'
+		}
+
+		const subDid = new SubDid()
+
+		expect(check).toBeCalledTimes(6)
+
+		expect(check).nthCalledWith(1, subDid, 'will', SuperClass, undefined, 'super')
+		expect(check).nthCalledWith(2, subDid, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(3, subDid, 'did', SubDid, 'super', undefined)
+
+		expect(check).nthCalledWith(4, subDid, 'will', SuperClass, 'super', 'subDid')
+		expect(check).nthCalledWith(5, subDid, 'did', SuperClass, 'subDid', 'super')
+		expect(check).nthCalledWith(6, subDid, 'did', SubDid, 'subDid', 'super')
 	})
 })

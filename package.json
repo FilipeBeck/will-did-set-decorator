@@ -1,6 +1,6 @@
 {
   "name": "will-did-set-decorator",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Class property decorator to handle will-set and did-set",
   "main": "index.js",
   "repository": {
