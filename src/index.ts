@@ -21,7 +21,7 @@ interface Prototype {
 	__proto__: Prototype
 }
 /**
- * Scopes for accessors of each constructor, isolating themfrom the prototype chain.
+ * Scopes for accessors of each constructor, isolating them from the prototype chain.
  */
 const scopes = new Map<Prototype, Record<symbol, SetListener>>()
 /**
@@ -56,22 +56,32 @@ function getKeySymbol(key: string | symbol): symbol {
 	return keySymbol
 }
 /**
- * Retrieves the first assignment handler (`willSet` or `didSet` according the `phase`) for the symbol related to the property in the chain of `target` prototype.
- * @param phase Assignment phase (if `willSet` or `didSet`).
+ * Retrieves the closest assignment handlers (`willSet` and `didSet`) for the symbol related to the property in the chain of `target` prototype.
  * @param target Prototype to be verified.
- * @param keySymbol Symbol determing the property to be verified.
- * @returns The assignment handler or `undefined` if there are no handlers in the prototype chain.
+ * @param propertyKey Symbol determing the property to be verified.
+ * @returns The assignment handlers or `{}` if there are no handlers in the prototype chain.
  */
-function getFirstSetHandler(phase: keyof SetListener, target: Prototype, keySymbol: symbol): Function | undefined {
-	let handler: Function | undefined
+function getClosestHandlers(target: Prototype, keySymbol: symbol): SetListener {
+	const listener: SetListener = {}
 
 	do {
-		handler = getScope(target)[keySymbol]?.[phase]
+		const scope = getScope(target)[keySymbol]
+
+		if (scope) {
+			if (scope.will) {
+				listener.will = scope.will
+			}
+
+			if (scope.did) {
+				listener.did = scope.did
+			}
+		}
+
 		target = target.__proto__
 	}
-	while (!handler && target)
+	while (!(listener.will && listener.did) && target)
 
-	return handler
+	return listener
 }
 /**
  * Bind accessor methods to `target` with `willSet` or/and `didSet` calls.
@@ -111,10 +121,8 @@ function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetList
  */
 export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
-		const prototype = target as Prototype
 		const keySymbol = getKeySymbol(propertyKey)
-		const superWillSet = getFirstSetHandler('will', prototype, keySymbol)
-		const superDidSet = getFirstSetHandler('did', prototype, keySymbol)
+		const closetHandlers = getClosestHandlers(target as Prototype, keySymbol)
 		/**
 		 * Handler for `willSet`. Ensures that the `willSet` of superclass will be called just after if it exists.
 		 * @param this Instance where `newValue` will be assigned.
@@ -122,10 +130,10 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 		 */
 		function thisWillSet(this: object, newValue: any) {
 			handler.call(this, newValue)
-			superWillSet?.call(this, newValue)
+			closetHandlers.will?.call(this, newValue)
 		}
 
-		return bindAccessor(prototype, keySymbol, { will: thisWillSet, did: superDidSet })
+		return bindAccessor(target as Prototype, keySymbol, { will: thisWillSet, did: closetHandlers.did })
 	}
 }
 /**
@@ -135,20 +143,18 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
  */
 export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
-		const prototype = target as Prototype
 		const keySymbol = getKeySymbol(propertyKey)
-		const superWillSet = getFirstSetHandler('will', prototype, keySymbol)
-		const superDidSet = getFirstSetHandler('did', prototype, keySymbol)
+		const closestHandlers = getClosestHandlers(target as Prototype, keySymbol)
 		/**
 		 * Handler for `didSet`. Ensures that the `didSet` of superclass will be called just before if it exists.
 		 * @param this Instance where `oldValue` was assigned.
 		 * @param oldValue Value before assignment.
 		 */
 		function thisDidSet(this: object, oldValue: any) {
-			superDidSet?.call(this, oldValue)
+			closestHandlers.did?.call(this, oldValue)
 			handler.call(this, oldValue)
 		}
 
-		return bindAccessor(prototype, keySymbol, { will: superWillSet, did: thisDidSet })
+		return bindAccessor(target as Prototype, keySymbol, { will: closestHandlers.will, did: thisDidSet })
 	}
 }
