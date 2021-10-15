@@ -19,25 +19,21 @@ interface Prototype {
 	 * Prototype chain.
 	 */
 	__proto__: Prototype
-	/**
-	 * Constructor function.
-	 */
-	constructor: Function
 }
 /**
  * Scopes for accessors of each constructor, isolating themfrom the prototype chain.
  */
-const scopes = new Map<Function, Record<symbol, SetListener>>()
+const scopes = new Map<Prototype, Record<symbol, SetListener>>()
 /**
  * Retrieves the `target` scope  or creates a new if it does not exist.
  * @param target Prototype to be verified.
  * @returns The scope.
  */
 function getScope(target: Prototype): Record<symbol, SetListener> {
-	let scope = scopes.get(target.constructor)
+	let scope = scopes.get(target)
 
 	if (!scope) {
-		scopes.set(target.constructor, scope = {})
+		scopes.set(target, scope = {})
 	}
 
 	return scope
