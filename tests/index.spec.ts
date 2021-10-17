@@ -1,10 +1,10 @@
 import { willSet, didSet } from '../src/index'
 
+const check = jest.fn()
+
+beforeEach(check.mockClear)
+
 describe('willSet', () => {
-	const check = jest.fn()
-
-	afterEach(check.mockClear)
-
 	it('calls before assignment with key of type string', () => {
 		class Clazz {
 			@willSet(function(this: Clazz, newValue: string) {
@@ -173,10 +173,6 @@ describe('willSet', () => {
 })
 
 describe('didSet', () => {
-	const check = jest.fn()
-
-	afterEach(check.mockClear)
-
 	it('calls after assignment with key of type string', () => {
 		class Clazz {
 			@didSet(function(this: Clazz, oldValue: string) {
@@ -345,10 +341,6 @@ describe('didSet', () => {
 })
 
 describe('willSet + didSet', () => {
-	const check = jest.fn()
-
-	afterEach(check.mockClear)
-
 	it('calls in the appropriate time with key of type string', () => {
 		class Clazz {
 			@willSet(function(this: Clazz, newValue: string) {
@@ -582,108 +574,150 @@ describe('willSet + didSet', () => {
 	})
 
 	it('handles asymmetric overwrite with key of type string', () => {
-		class SuperClass {
+		class HyperClass {
+			@willSet(function(this: HyperClass, newValue: string) {
+				check(this, 'will', HyperClass, this.prop, newValue)
+			})
+			public prop?: string
+		}
+
+		class SuperClass extends HyperClass {
 			@willSet(function(this: SuperClass, newValue: string) {
 				check(this, 'will', SuperClass, this.prop, newValue)
 			})
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, 'did', SuperClass, this.prop, oldValue)
 			})
-			public prop = 'super'
+			public override prop?: string
 		}
 
-		class SubWill extends SuperClass {
-			@willSet(function(this: SubWill, newValue: string) {
-				check(this, 'will', SubWill, this.prop, newValue)
+		class InterClass extends SuperClass {
+			@willSet(function(this: InterClass, newValue: string) {
+				check(this, 'will', InterClass, this.prop, newValue)
 			})
-			public override prop = 'subWill'
+			public override prop?: string
 		}
 
-		const subWill = new SubWill()
+		class BridgeClass extends InterClass {
+			@didSet(function(this: InterClass, newValue: string) {
+				check(this, 'did', BridgeClass, this.prop, newValue)
+			})
+			public override prop?: string
+		}
+
+		class WillClass extends BridgeClass {
+			@willSet(function(this: WillClass, newValue: string) {
+				check(this, 'will', WillClass, this.prop, newValue)
+			})
+			public override prop = 'willClass'
+		}
+
+		const willClass = new WillClass()
 
 		expect(check).toBeCalledTimes(6)
 
-		expect(check).nthCalledWith(1, subWill, 'will', SubWill, undefined, 'super')
-		expect(check).nthCalledWith(2, subWill, 'will', SuperClass, undefined, 'super')
-		expect(check).nthCalledWith(3, subWill, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(1, willClass, 'will', WillClass, undefined, 'willClass')
+		expect(check).nthCalledWith(2, willClass, 'will', InterClass, undefined, 'willClass')
+		expect(check).nthCalledWith(3, willClass, 'will', SuperClass, undefined, 'willClass')
+		expect(check).nthCalledWith(4, willClass, 'will', HyperClass, undefined, 'willClass')
 
-		expect(check).nthCalledWith(4, subWill, 'will', SubWill, 'super', 'subWill')
-		expect(check).nthCalledWith(5, subWill, 'will', SuperClass, 'super', 'subWill')
-		expect(check).nthCalledWith(6, subWill, 'did', SuperClass, 'subWill', 'super')
+		expect(check).nthCalledWith(5, willClass, 'did', SuperClass, 'willClass', undefined)
+		expect(check).nthCalledWith(6, willClass, 'did', BridgeClass, 'willClass', undefined)
 
 		check.mockClear()
 
-		class SubDid extends SuperClass {
-			@didSet(function(this: SubDid, oldValue) {
-				check(this, 'did', SubDid, this.prop, oldValue)
+		class DidClass extends BridgeClass {
+			@didSet(function(this: DidClass, oldValue) {
+				check(this, 'did', DidClass, this.prop, oldValue)
 			})
-			public override prop = 'subDid'
+			public override prop = 'didClass'
 		}
 
-		const subDid = new SubDid()
+		const didClass = new DidClass()
 
 		expect(check).toBeCalledTimes(6)
 
-		expect(check).nthCalledWith(1, subDid, 'will', SuperClass, undefined, 'super')
-		expect(check).nthCalledWith(2, subDid, 'did', SuperClass, 'super', undefined)
-		expect(check).nthCalledWith(3, subDid, 'did', SubDid, 'super', undefined)
+		expect(check).nthCalledWith(1, didClass, 'will', InterClass, undefined, 'didClass')
+		expect(check).nthCalledWith(2, didClass, 'will', SuperClass, undefined, 'didClass')
+		expect(check).nthCalledWith(3, didClass, 'will', HyperClass, undefined, 'didClass')
 
-		expect(check).nthCalledWith(4, subDid, 'will', SuperClass, 'super', 'subDid')
-		expect(check).nthCalledWith(5, subDid, 'did', SuperClass, 'subDid', 'super')
-		expect(check).nthCalledWith(6, subDid, 'did', SubDid, 'subDid', 'super')
+		expect(check).nthCalledWith(4, didClass, 'did', SuperClass, 'didClass', undefined)
+		expect(check).nthCalledWith(5, didClass, 'did', BridgeClass, 'didClass', undefined)
+		expect(check).nthCalledWith(6, didClass, 'did', DidClass, 'didClass', undefined)
 	})
 
 	it('handles asymmetric overwrite with key of type symbol', () => {
 		const prop = Symbol()
 
-		class SuperClass {
+		class HyperClass {
+			@willSet(function(this: HyperClass, newValue: string) {
+				check(this, 'will', HyperClass, this[prop], newValue)
+			})
+			public [prop]?: string
+		}
+
+		class SuperClass extends HyperClass {
 			@willSet(function(this: SuperClass, newValue: string) {
 				check(this, 'will', SuperClass, this[prop], newValue)
 			})
 			@didSet(function(this: SuperClass, oldValue: string) {
 				check(this, 'did', SuperClass, this[prop], oldValue)
 			})
-			public [prop] = 'super'
+			public override [prop]?: string
 		}
 
-		class SubWill extends SuperClass {
-			@willSet(function(this: SubWill, newValue: string) {
-				check(this, 'will', SubWill, this[prop], newValue)
+		class InterClass extends SuperClass {
+			@willSet(function(this: InterClass, newValue: string) {
+				check(this, 'will', InterClass, this[prop], newValue)
 			})
-			public override [prop] = 'subWill'
+			public override [prop]?: string
 		}
 
-		const subWill = new SubWill()
+		class BridgeClass extends InterClass {
+			@didSet(function(this: InterClass, newValue: string) {
+				check(this, 'did', BridgeClass, this[prop], newValue)
+			})
+			public override [prop]?: string
+		}
+
+		class WillClass extends BridgeClass {
+			@willSet(function(this: WillClass, newValue: string) {
+				check(this, 'will', WillClass, this[prop], newValue)
+			})
+			public override [prop] = 'willClass'
+		}
+
+		const willClass = new WillClass()
 
 		expect(check).toBeCalledTimes(6)
 
-		expect(check).nthCalledWith(1, subWill, 'will', SubWill, undefined, 'super')
-		expect(check).nthCalledWith(2, subWill, 'will', SuperClass, undefined, 'super')
-		expect(check).nthCalledWith(3, subWill, 'did', SuperClass, 'super', undefined)
+		expect(check).nthCalledWith(1, willClass, 'will', WillClass, undefined, 'willClass')
+		expect(check).nthCalledWith(2, willClass, 'will', InterClass, undefined, 'willClass')
+		expect(check).nthCalledWith(3, willClass, 'will', SuperClass, undefined, 'willClass')
+		expect(check).nthCalledWith(4, willClass, 'will', HyperClass, undefined, 'willClass')
 
-		expect(check).nthCalledWith(4, subWill, 'will', SubWill, 'super', 'subWill')
-		expect(check).nthCalledWith(5, subWill, 'will', SuperClass, 'super', 'subWill')
-		expect(check).nthCalledWith(6, subWill, 'did', SuperClass, 'subWill', 'super')
+		expect(check).nthCalledWith(5, willClass, 'did', SuperClass, 'willClass', undefined)
+		expect(check).nthCalledWith(6, willClass, 'did', BridgeClass, 'willClass', undefined)
 
 		check.mockClear()
 
-		class SubDid extends SuperClass {
-			@didSet(function(this: SubDid, oldValue) {
-				check(this, 'did', SubDid, this[prop], oldValue)
+		class DidClass extends BridgeClass {
+			@didSet(function(this: DidClass, oldValue) {
+				check(this, 'did', DidClass, this[prop], oldValue)
 			})
-			public override [prop] = 'subDid'
+			public override [prop] = 'didClass'
 		}
 
-		const subDid = new SubDid()
+		const didClass = new DidClass()
 
 		expect(check).toBeCalledTimes(6)
 
-		expect(check).nthCalledWith(1, subDid, 'will', SuperClass, undefined, 'super')
-		expect(check).nthCalledWith(2, subDid, 'did', SuperClass, 'super', undefined)
-		expect(check).nthCalledWith(3, subDid, 'did', SubDid, 'super', undefined)
+		expect(check).nthCalledWith(1, didClass, 'will', InterClass, undefined, 'didClass')
+		expect(check).nthCalledWith(2, didClass, 'will', SuperClass, undefined, 'didClass')
+		expect(check).nthCalledWith(3, didClass, 'will', HyperClass, undefined, 'didClass')
 
-		expect(check).nthCalledWith(4, subDid, 'will', SuperClass, 'super', 'subDid')
-		expect(check).nthCalledWith(5, subDid, 'did', SuperClass, 'subDid', 'super')
-		expect(check).nthCalledWith(6, subDid, 'did', SubDid, 'subDid', 'super')
+		expect(check).nthCalledWith(4, didClass, 'did', SuperClass, 'didClass', undefined)
+		expect(check).nthCalledWith(5, didClass, 'did', BridgeClass, 'didClass', undefined)
+		expect(check).nthCalledWith(6, didClass, 'did', DidClass, 'didClass', undefined)
 	})
 })

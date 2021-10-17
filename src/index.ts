@@ -14,29 +14,15 @@ interface SetListener {
 /**
  * Prototype with relevant contextual information for `willSet` and `didSet` setup.
  */
-interface Prototype {
+interface Prototype extends Object {
 	/**
 	 * Prototype chain.
 	 */
 	__proto__: Prototype
-}
-/**
- * Scopes for accessors of each constructor, isolating them from the prototype chain.
- */
-const scopes = new Map<Prototype, Record<symbol, SetListener>>()
-/**
- * Retrieves the `target` scope  or creates a new if it does not exist.
- * @param target Prototype to be verified.
- * @returns The scope.
- */
-function getScope(target: Prototype): Record<symbol, SetListener> {
-	let scope = scopes.get(target)
-
-	if (!scope) {
-		scopes.set(target, scope = {})
-	}
-
-	return scope
+	/**
+	 * Constructor with assignment handlers information.
+	 */
+	constructor: Function & Record<symbol, SetListener>
 }
 /**
  * Shared symbols identified by property key.
@@ -56,32 +42,38 @@ function getKeySymbol(key: string | symbol): symbol {
 	return keySymbol
 }
 /**
- * Retrieves the closest assignment handlers (`willSet` and `didSet`) for the symbol related to the property in the chain of `target` prototype.
+ * Retrieves the `target` constructor's own `setListener`.
+ * @param target Prototype with constructor to be verified.
+ * @returns The listener if constructor of `target` has it as own property.
+ */
+function getOwnListener(target: Prototype, keySymbol: symbol): SetListener | void {
+	if (target.constructor.hasOwnProperty(keySymbol)) {
+		return target.constructor[keySymbol]
+	}
+}
+/**
+ * Update the `target` constructor's own listener with `setListener`.
+ * @param target Prototype with constructor to be updated.
+ * @param keySymbol Key of listener to be updated.
+ * @param setListener Listener to be assigned.
+ * @returns The updated listener.
+ */
+function putOwnListener(target: Prototype, keySymbol: symbol, setListener: SetListener): SetListener {
+	if (!target.constructor.hasOwnProperty(keySymbol)) {
+		return target.constructor[keySymbol] = setListener
+	}
+	else {
+		return Object.assign(target.constructor[keySymbol], setListener)
+	}
+}
+/**
+ * Retrieves a copy of closest assignment handlers (`willSet` and `didSet`) for the symbol related to the property in the chain of `target` constructor.
  * @param target Prototype to be verified.
  * @param propertyKey Symbol determing the property to be verified.
  * @returns The assignment handlers or `{}` if there are no handlers in the prototype chain.
  */
-function getClosestHandlers(target: Prototype, keySymbol: symbol): SetListener {
-	const listener: SetListener = {}
-
-	do {
-		const scope = getScope(target)[keySymbol]
-
-		if (scope) {
-			if (scope.will) {
-				listener.will = scope.will
-			}
-
-			if (scope.did) {
-				listener.did = scope.did
-			}
-		}
-
-		target = target.__proto__
-	}
-	while (!(listener.will && listener.did) && target)
-
-	return listener
+function getClosestListener(target: Prototype, keySymbol: symbol): SetListener {
+	return { ...target.constructor[keySymbol] }
 }
 /**
  * Bind accessor methods to `target` with `willSet` or/and `didSet` calls.
@@ -91,13 +83,11 @@ function getClosestHandlers(target: Prototype, keySymbol: symbol): SetListener {
  * @returns The updated property descriptor or `undefined` if it is already binded.
  */
 function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetListener): PropertyDescriptor | undefined {
-	const scope = getScope(target)
-	const alreadyBinded = keySymbol in scope
-	const listener: SetListener = scope[keySymbol] ||= {}
+	const previousListener = getOwnListener(target, keySymbol)
+	const listener = putOwnListener(target, keySymbol, setListener)
 
-	Object.assign(listener, setListener)
 	// If already binded, just update `listener` is enough.
-	if (alreadyBinded) {
+	if (previousListener) {
 		return
 	}
 
@@ -122,18 +112,19 @@ function bindAccessor(target: Prototype, keySymbol: symbol, setListener: SetList
 export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
 		const keySymbol = getKeySymbol(propertyKey)
-		const closetHandlers = getClosestHandlers(target as Prototype, keySymbol)
+		const listener = getClosestListener(target as Prototype, keySymbol)
+		const closestWill = listener.will
 		/**
-		 * Handler for `willSet`. Ensures that the `willSet` of superclass will be called just after if it exists.
+		 * Handler for `willSet`. Ensures that the closest `willSet` will be called just after if it exists.
 		 * @param this Instance where `newValue` will be assigned.
 		 * @param newValue Value after assignment.
 		 */
-		function thisWillSet(this: object, newValue: any) {
+		listener.will = function(this: object, newValue: any) {
 			handler.call(this, newValue)
-			closetHandlers.will?.call(this, newValue)
+			closestWill?.call(this, newValue)
 		}
 
-		return bindAccessor(target as Prototype, keySymbol, { will: thisWillSet, did: closetHandlers.did })
+		return bindAccessor(target as Prototype, keySymbol, listener)
 	}
 }
 /**
@@ -144,17 +135,18 @@ export function willSet(handler: (newValue: any) => void): PropertyDecorator {
 export function didSet(handler: (oldValue: any) => void): PropertyDecorator {
 	return function (target: Object, propertyKey: string | symbol): PropertyDescriptor | undefined {
 		const keySymbol = getKeySymbol(propertyKey)
-		const closestHandlers = getClosestHandlers(target as Prototype, keySymbol)
+		const listener = getClosestListener(target as Prototype, keySymbol)
+		const closestDid = listener.did
 		/**
-		 * Handler for `didSet`. Ensures that the `didSet` of superclass will be called just before if it exists.
+		 * Handler for `didSet`. Ensures that the closest `didSet` will be called just before if it exists.
 		 * @param this Instance where `oldValue` was assigned.
 		 * @param oldValue Value before assignment.
 		 */
-		function thisDidSet(this: object, oldValue: any) {
-			closestHandlers.did?.call(this, oldValue)
+		listener.did = function(this: object, oldValue: any) {
+			closestDid?.call(this, oldValue)
 			handler.call(this, oldValue)
 		}
 
-		return bindAccessor(target as Prototype, keySymbol, { will: closestHandlers.will, did: thisDidSet })
+		return bindAccessor(target as Prototype, keySymbol, listener)
 	}
 }
